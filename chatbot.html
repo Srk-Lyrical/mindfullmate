@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mindfulmate - AI Mental Health Chatbot</title>
+<link rel="stylesheet" href="chatbot.css">
+</head>
+<body>
+<header>
+    <h1>Mindfulmate</h1>
+    <p>AI-Powered Mental Health Support for Higher Education Students</p>
+    <button id="logout-btn">Logout</button>
+</header>
+<div id="main-container">
+    <div id="sidebar">
+        <h2>Mental Health Tracker</h2>
+        <div id="mood-tracker">
+            <h3>How are you feeling today?</h3>
+            <div class="mood-buttons">
+                <button class="mood-btn" data-mood="happy">😊 Happy</button>
+                <button class="mood-btn" data-mood="sad">😢 Sad</button>
+                <button class="mood-btn" data-mood="anxious">😰 Anxious</button>
+                <button class="mood-btn" data-mood="stressed">😫 Stressed</button>
+                <button class="mood-btn" data-mood="neutral">😐 Neutral</button>
+            </div>
+            <p id="mood-message"></p>
+        </div>
+        <div id="journal">
+            <h3>Quick Journal Entry</h3>
+            <textarea id="journal-input" placeholder="Write about your day..."></textarea>
+            <button id="save-journal">Save Entry</button>
+            <p id="journal-message"></p>
+        </div>
+    </div>
+    <div id="chat-section">
+        <div id="chat-container" aria-live="polite" aria-label="Chat messages"></div>
+        <div id="input-container">
+            <textarea id="user-input" rows="2" placeholder="Share how you're feeling or ask for advice..." aria-label="Type your message"></textarea>
+            <button id="send-btn" aria-label="Send message">Send</button>
+        </div>
+    </div>
+</div>
+<script src="chatbot.js"></script>
+</body>
+</html>
