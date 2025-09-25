@@ -9,7 +9,6 @@
 <body>
 <header>
     <h1>Mindfulmate</h1>
-    <p>AI-Powered Mental Health Support for Higher Education Students</p>
     <button id="logout-btn">Logout</button>
 </header>
 <div id="main-container">
@@ -32,8 +31,25 @@
             <button id="save-journal">Save Entry</button>
             <p id="journal-message"></p>
         </div>
+        <div id="biodata-link">
+            <h3>Personalize Your Experience</h3>
+            <p>Fill out your bio data for personalized mental health support.</p>
+            <button id="go-to-biodata">Update Bio Data</button>
+        </div>
     </div>
     <div id="chat-section">
+        <div id="language-selector">
+            <label for="language-select">Select Language:</label>
+            <select id="language-select">
+                <option value="en">English</option>
+                <option value="hi">Hindi</option>
+                <option value="ta">Tamil</option>
+                <option value="te">Telugu</option>
+                <option value="ml">Malayalam</option>
+                <option value="kn">Kannada</option>
+                <option value="ur">Urdu</option>
+            </select>
+        </div>
         <div id="chat-container" aria-live="polite" aria-label="Chat messages"></div>
         <div id="input-container">
             <textarea id="user-input" rows="2" placeholder="Share how you're feeling or ask for advice..." aria-label="Type your message"></textarea>
@@ -41,6 +57,6 @@
         </div>
     </div>
 </div>
-<script src="chatbot.js"></script>
+<script type="module" src="chatbot.js"></script>
 </body>
 </html>
