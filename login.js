@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const signupTab = document.getElementById('signupTab');
     const loginSection = document.getElementById('loginSection');
     const signupSection = document.getElementById('signupSection');
+    const forgotPasswordLink = document.getElementById('forgotPassword');
 
     // Simulate progress percentage (e.g., points earned)
     let progressPercent = 0;
@@ -39,6 +40,21 @@ document.addEventListener('DOMContentLoaded', () => {
         loginTab.classList.remove('active');
         signupSection.classList.remove('hidden');
         loginSection.classList.add('hidden');
+    });
+
+    // Forgot password logic
+    forgotPasswordLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        const email = prompt('Enter your email address to reset password:');
+        if (email) {
+            const users = JSON.parse(localStorage.getItem('mindCareUsers')) || [];
+            const user = users.find(u => u.email === email);
+            if (user) {
+                alert('Password reset link sent to your email. (Simulated)');
+            } else {
+                alert('No account found with that email.');
+            }
+        }
     });
 
     loginForm.addEventListener('submit', (e) => {

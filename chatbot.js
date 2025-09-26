@@ -1,17 +1,21 @@
 import { GEMINI_API_KEY } from './config.js';
 
-document.addEventListener('DOMContentLoaded', () => {
-    const chatContainer = document.getElementById('chat-container');
-    const userInput = document.getElementById('user-input');
-    const sendBtn = document.getElementById('send-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const moodButtons = document.querySelectorAll('.mood-btn');
-    const moodMessage = document.getElementById('mood-message');
-    const journalInput = document.getElementById('journal-input');
-    const saveJournalBtn = document.getElementById('save-journal');
-    const journalMessage = document.getElementById('journal-message');
-    const languageSelect = document.getElementById('language-select');
-    const goToBiodataBtn = document.getElementById('go-to-biodata');
+    document.addEventListener('DOMContentLoaded', () => {
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const micBtn = document.getElementById('mic-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const moodButtons = document.querySelectorAll('.mood-btn');
+        const moodMessage = document.getElementById('mood-message');
+        const journalInput = document.getElementById('journal-input');
+        const saveJournalBtn = document.getElementById('save-journal');
+        const journalMessage = document.getElementById('journal-message');
+        const languageSelect = document.getElementById('language-select');
+        const goToBiodataBtn = document.getElementById('go-to-biodata');
+
+        // Auto-focus on chat input
+        userInput.focus();
 
     // Language translations
     const translations = {
@@ -97,17 +101,108 @@ document.addEventListener('DOMContentLoaded', () => {
         // Note: Welcome message is already displayed, so we might need to refresh or handle dynamically
     }
 
-    // Language selector event listener
-    languageSelect.addEventListener('change', (e) => {
-        const selectedLang = e.target.value;
-        updateLanguage(selectedLang);
-        localStorage.setItem('selectedLanguage', selectedLang);
-    });
-
     // Load saved language
     const savedLang = localStorage.getItem('selectedLanguage') || 'en';
     languageSelect.value = savedLang;
     updateLanguage(savedLang);
+
+    // Speech language mapping
+    const speechLangMap = {
+        en: 'en-US',
+        hi: 'hi-IN',
+        ta: 'ta-IN',
+        te: 'te-IN',
+        ml: 'ml-IN',
+        kn: 'kn-IN',
+        ur: 'ur-IN'
+    };
+
+    // Voice recognition and synthesis setup
+    let recognition;
+    let isListening = false;
+    let synth = window.speechSynthesis;
+
+    // Speech synthesis setup
+    function speakText(text, lang) {
+        if (!synth) {
+            console.warn('Speech synthesis not supported');
+            return;
+        }
+        synth.cancel(); // Stop any ongoing speech
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = speechLangMap[lang] || 'en-US';
+        utterance.rate = 0.9; // Slightly slower for clarity
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        synth.speak(utterance);
+    }
+
+    // Voice recognition setup
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = speechLangMap[savedLang] || 'en-US';
+
+        recognition.onstart = () => {
+            isListening = true;
+            micBtn.textContent = '⏹️';
+            micBtn.classList.add('listening');
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            userInput.value = transcript;
+            sendBtn.click(); // Auto-send
+        };
+
+        recognition.onend = () => {
+            isListening = false;
+            micBtn.textContent = '🎤';
+            micBtn.classList.remove('listening');
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            isListening = false;
+            micBtn.textContent = '🎤';
+            micBtn.classList.remove('listening');
+            if (event.error === 'not-allowed') {
+                alert('Microphone access denied. Please allow access to use voice input.');
+            } else {
+                alert('Speech recognition error. Please try again.');
+            }
+        };
+    } else {
+        micBtn.disabled = true;
+        micBtn.title = 'Voice input not supported in this browser';
+    }
+
+    // Microphone button event listener
+    micBtn.addEventListener('click', () => {
+        if (!recognition) {
+            alert('Voice input is not supported in this browser. Please use text input.');
+            return;
+        }
+        if (isListening) {
+            recognition.stop();
+        } else {
+            const currentLang = languageSelect.value;
+            recognition.lang = speechLangMap[currentLang] || 'en-US';
+            recognition.start();
+        }
+    });
+
+    // Language selector event listener (merged)
+    languageSelect.addEventListener('change', (e) => {
+        const selectedLang = e.target.value;
+        updateLanguage(selectedLang);
+        localStorage.setItem('selectedLanguage', selectedLang);
+        if (recognition) {
+            recognition.lang = speechLangMap[selectedLang] || 'en-US';
+        }
+    });
 
     // Logout functionality
     logoutBtn.addEventListener('click', () => {
@@ -138,6 +233,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Remove typing indicator and add actual response
             chatContainer.removeChild(chatContainer.lastChild);
             appendMessage(response, 'bot-message');
+            // Speak the response
+            const currentLang = languageSelect.value;
+            speakText(response, currentLang);
         } catch (error) {
             // Remove typing indicator and show error
             chatContainer.removeChild(chatContainer.lastChild);
@@ -217,19 +315,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Function to get response from Gemini
     async function getBotResponse(userText) {
+        const prompt = getPersonalizedPrompt(userText);
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
         try {
-            const personalizedPrompt = getPersonalizedPrompt(userText);
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     contents: [
                         {
                             parts: [
                                 {
-                                    text: personalizedPrompt
+                                    text: prompt
                                 }
                             ]
                         }
@@ -242,11 +342,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
-            return data.candidates[0].content.parts[0].text.trim();
+            const botResponse = data.candidates[0].content.parts[0].text;
+            return botResponse;
         } catch (error) {
             console.error('Error fetching response from Gemini:', error);
-            // Fallback to basic response
-            return "I'm having trouble connecting right now. Please try again later. Remember, if you're in crisis, reach out to a professional or hotline.";
+            const selectedLang = localStorage.getItem('selectedLanguage') || 'en';
+            return translations[selectedLang].error;
         }
     }
 
