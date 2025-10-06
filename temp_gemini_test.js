@@ -1,4 +1,4 @@
-const GEMINI_API_KEY = 'AIzaSyAmjFNcGmXB1yPEGKA6ctE1SWDKKmFZXkM';
+const GEMINI_API_KEY = 'AlzaSyB1yNWC-QIxFto2Phs0vfHf4JMWAPhUX1A';
 
 async function testGemini() {
   const prompt = `You are Mindfulmate, an AI mental health support chatbot for higher education students. Provide empathetic, supportive responses focused on mental health, stress management, and well-being. Encourage seeking professional help when appropriate. User message: Hello, how are you?`;

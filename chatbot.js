@@ -1,4 +1,4 @@
-import { GEMINI_API_KEY } from './config.js';
+import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
 
     document.addEventListener('DOMContentLoaded', () => {
         const chatContainer = document.getElementById('chat-container');
@@ -204,12 +204,10 @@ import { GEMINI_API_KEY } from './config.js';
         }
     });
 
-    // Logout functionality
     logoutBtn.addEventListener('click', () => {
         window.location.href = 'login.html';
     });
 
-    // Append message to chat
     function appendMessage(text, className) {
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message ' + className;
@@ -220,7 +218,6 @@ import { GEMINI_API_KEY } from './config.js';
 
 
 
-    // Send message
     sendBtn.addEventListener('click', async () => {
         const text = userInput.value.trim();
         if (!text) return;
@@ -229,7 +226,7 @@ import { GEMINI_API_KEY } from './config.js';
         // Show typing indicator
         appendMessage('Typing...', 'bot-message');
         try {
-            const response = await getBotResponse(text);
+            const response = await getOpenRouterResponse(text);
             // Remove typing indicator and add actual response
             chatContainer.removeChild(chatContainer.lastChild);
             appendMessage(response, 'bot-message');
@@ -316,38 +313,75 @@ import { GEMINI_API_KEY } from './config.js';
     // Function to get response from Gemini
     async function getBotResponse(userText) {
         const prompt = getPersonalizedPrompt(userText);
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
         try {
-            const response = await fetch(url, {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    contents: [
-                        {
-                            parts: [
-                                {
-                                    text: prompt
-                                }
-                            ]
-                        }
-                    ]
+                    contents: [{ parts: [{ text: prompt }] }]
                 })
             });
-
-            if (!response.ok) {
-                throw new Error(`API request failed with status ${response.status}`);
-            }
-
+            if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
             const data = await response.json();
-            const botResponse = data.candidates[0].content.parts[0].text;
-            return botResponse;
+            return data.candidates[0].content.parts[0].text.trim();
         } catch (error) {
             console.error('Error fetching response from Gemini:', error);
             const selectedLang = localStorage.getItem('selectedLanguage') || 'en';
             return translations[selectedLang].error;
+        }
+    }
+
+    // Function to get response from OpenRouter
+    async function getOpenRouterResponse(userText) {
+        const systemPrompt = getPersonalizedPrompt(''); // Get the base prompt without user text
+        console.log("OpenRouter API call - systemPrompt:", systemPrompt);
+        console.log("OpenRouter API call - userText:", userText);
+        try {
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                    'Content-Type': 'application/json',
+                    // Optional: Include these for app attribution on OpenRouter leaderboards
+                    'HTTP-Referer': 'http://localhost:5500', // Your site URL/localhost
+                    'X-Title': 'Mindfulmate Chatbot' // Your app title
+                },
+                body: JSON.stringify({
+                    model: "deepseek/deepseek-chat-v3.1:free",
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userText }
+                    ]
+                })
+            });
+            console.log("OpenRouter API request headers:", response.headers);
+            console.log("OpenRouter API request body:", JSON.stringify({
+                model: "deepseek/deepseek-chat-v3.1:free",
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userText }
+                ]
+            }));
+            console.log("OpenRouter API response status:", response.status);
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error(`API Error: ${response.status} - ${errorData.error.message}`);
+                throw new Error(`API Error: ${response.status} - ${errorData.error.message}`);
+            }
+
+            const data = await response.json();
+
+            // Assuming a non-streaming response structure similar to OpenAI
+            const aiContent = data.choices[0].message.content;
+            return aiContent;
+
+        } catch (error) {
+            console.error("Fetch error:", error);
+            const selectedLang = localStorage.getItem('selectedLanguage') || 'en';
+            return translations[selectedLang].error + " (Check console for details)";
         }
     }
 
