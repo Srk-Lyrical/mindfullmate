@@ -148,6 +148,19 @@ header h1 {
     box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
 }
 
+#mood-chart {
+    margin-bottom: 2.5rem;
+    background-color: #f8fafc;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+#mood-chart canvas {
+    max-width: 100%;
+    height: auto;
+}
+
 #go-to-biodata {
     background: linear-gradient(135deg, #48bb78, #38a169);
     color: white;

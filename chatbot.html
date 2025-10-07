@@ -31,6 +31,11 @@
             <button id="save-journal">Save Entry</button>
             <p id="journal-message"></p>
         </div>
+        <div id="mood-chart">
+            <h3>Mood Trends</h3>
+            <canvas id="moodChart"></canvas>
+            <button id="download-report">Download Weekly Report</button>
+        </div>
         <div id="biodata-link">
             <h3>Personalize Your Experience</h3>
             <p>Fill out your bio data for personalized mental health support.</p>
@@ -59,6 +64,9 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <script src="https://js.puter.com/v2/"></script>
 <script type="module" src="chatbot.js"></script>
 </body>

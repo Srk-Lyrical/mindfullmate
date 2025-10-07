@@ -13,11 +13,10 @@ import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
         const journalMessage = document.getElementById('journal-message');
         const languageSelect = document.getElementById('language-select');
         const goToBiodataBtn = document.getElementById('go-to-biodata');
+        const downloadReportBtn = document.getElementById('download-report');
 
-        // Auto-focus on chat input
         userInput.focus();
 
-    // Language translations
     const translations = {
         en: {
             placeholder: "Share how you're feeling or ask for advice...",
@@ -91,22 +90,17 @@ import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
         }
     };
 
-    // Function to update UI based on selected language
     function updateLanguage(lang) {
         const trans = translations[lang];
         userInput.placeholder = trans.placeholder;
         journalInput.placeholder = trans.journalPlaceholder;
         saveJournalBtn.textContent = trans.saveEntry;
-        // Update welcome message if needed
-        // Note: Welcome message is already displayed, so we might need to refresh or handle dynamically
     }
 
-    // Load saved language
     const savedLang = localStorage.getItem('selectedLanguage') || 'en';
     languageSelect.value = savedLang;
     updateLanguage(savedLang);
 
-    // Speech language mapping
     const speechLangMap = {
         en: 'en-US',
         hi: 'hi-IN',
@@ -117,27 +111,25 @@ import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
         ur: 'ur-IN'
     };
 
-    // Voice recognition and synthesis setup
     let recognition;
     let isListening = false;
     let synth = window.speechSynthesis;
+    let moodChart;
 
-    // Speech synthesis setup
     function speakText(text, lang) {
         if (!synth) {
             console.warn('Speech synthesis not supported');
             return;
         }
-        synth.cancel(); // Stop any ongoing speech
+        synth.cancel(); 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = speechLangMap[lang] || 'en-US';
-        utterance.rate = 0.9; // Slightly slower for clarity
+        utterance.rate = 0.9; 
         utterance.pitch = 1;
         utterance.volume = 1;
         synth.speak(utterance);
     }
 
-    // Voice recognition setup
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRecognition();
@@ -179,7 +171,6 @@ import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
         micBtn.title = 'Voice input not supported in this browser';
     }
 
-    // Microphone button event listener
     micBtn.addEventListener('click', () => {
         if (!recognition) {
             alert('Voice input is not supported in this browser. Please use text input.');
@@ -194,7 +185,6 @@ import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
         }
     });
 
-    // Language selector event listener (merged)
     languageSelect.addEventListener('change', (e) => {
         const selectedLang = e.target.value;
         updateLanguage(selectedLang);
@@ -223,18 +213,14 @@ import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
         if (!text) return;
         appendMessage(text, 'user-message');
         userInput.value = '';
-        // Show typing indicator
         appendMessage('Typing...', 'bot-message');
         try {
             const response = await getOpenRouterResponse(text);
-            // Remove typing indicator and add actual response
             chatContainer.removeChild(chatContainer.lastChild);
             appendMessage(response, 'bot-message');
-            // Speak the response
             const currentLang = languageSelect.value;
             speakText(response, currentLang);
         } catch (error) {
-            // Remove typing indicator and show error
             chatContainer.removeChild(chatContainer.lastChild);
             appendMessage('Sorry, I encountered an error. Please try again.', 'bot-message');
         }
@@ -247,7 +233,52 @@ import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
         }
     });
 
-    // Mood tracking
+    function renderMoodChart() {
+        const moodData = JSON.parse(localStorage.getItem('moodTracker')) || {};
+        const moodCounts = { happy: 0, sad: 0, anxious: 0, stressed: 0, neutral: 0 };
+        Object.values(moodData).forEach(mood => {
+            if (moodCounts[mood] !== undefined) {
+                moodCounts[mood]++;
+            }
+        });
+        const ctx = document.getElementById('moodChart').getContext('2d');
+        if (moodChart) {
+            moodChart.destroy();
+        }
+        moodChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Happy', 'Sad', 'Anxious', 'Stressed', 'Neutral'],
+                datasets: [{
+                    label: 'Mood Count',
+                    data: [moodCounts.happy, moodCounts.sad, moodCounts.anxious, moodCounts.stressed, moodCounts.neutral],
+                    backgroundColor: [
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(153, 102, 255, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
     moodButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const mood = btn.dataset.mood;
@@ -256,17 +287,17 @@ import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
             moodData[date] = mood;
             localStorage.setItem('moodTracker', JSON.stringify(moodData));
             moodMessage.textContent = `Mood logged: ${mood.charAt(0).toUpperCase() + mood.slice(1)} on ${date}`;
+            renderMoodChart(); // Update chart after logging mood
         });
     });
 
-    // Journal saving
     saveJournalBtn.addEventListener('click', () => {
         const entry = journalInput.value.trim();
         if (!entry) {
             journalMessage.textContent = 'Please write something before saving.';
             return;
         }
-        const date = new Date().toLocaleString();
+        const date = new Date().toISOString();
         const journalData = JSON.parse(localStorage.getItem('journalEntries')) || [];
         journalData.push({ date, entry });
         localStorage.setItem('journalEntries', JSON.stringify(journalData));
@@ -274,12 +305,98 @@ import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
         journalMessage.textContent = 'Journal entry saved!';
     });
 
-    // Bio data button
     goToBiodataBtn.addEventListener('click', () => {
         window.location.href = 'biodata.html';
     });
 
-    // Function to get personalized prompt based on bio data
+    downloadReportBtn.addEventListener('click', () => {
+        downloadWeeklyReport();
+    });
+
+    async function downloadWeeklyReport() {
+        const moodData = JSON.parse(localStorage.getItem('moodTracker')) || {};
+        const journalData = JSON.parse(localStorage.getItem('journalEntries')) || [];
+        const today = new Date();
+        const weeklyMoods = [];
+        const moodCounts = { happy: 0, sad: 0, anxious: 0, stressed: 0, neutral: 0 };
+
+        // Get last 7 days
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(today.getDate() - i);
+            const dateStr = date.toLocaleDateString();
+            const mood = moodData[dateStr];
+            if (mood) {
+                weeklyMoods.push({ date: dateStr, mood });
+                if (moodCounts[mood] !== undefined) {
+                    moodCounts[mood]++;
+                }
+            }
+        }
+
+        // Filter journal entries for last 7 days
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(today.getDate() - 7);
+        const weeklyJournalEntries = journalData.filter(entry => {
+            const entryDate = new Date(entry.date);
+            return entryDate >= sevenDaysAgo && entryDate <= today;
+        });
+
+        // Create PDF
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF();
+
+        // Title
+        pdf.setFontSize(20);
+        pdf.text('Weekly Mood Report', 20, 30);
+
+        // Summary
+        pdf.setFontSize(12);
+        pdf.text('Generated on: ' + new Date().toLocaleDateString(), 20, 50);
+        pdf.text('Weekly Mood Summary:', 20, 70);
+        let y = 80;
+        Object.keys(moodCounts).forEach(mood => {
+            if (moodCounts[mood] > 0) {
+                pdf.text(`${mood.charAt(0).toUpperCase() + mood.slice(1)}: ${moodCounts[mood]}`, 30, y);
+                y += 10;
+            }
+        });
+
+        // Capture chart
+        const canvas = document.getElementById('moodChart');
+        if (canvas) {
+            const imgData = await html2canvas(canvas).then(canvas => canvas.toDataURL('image/png'));
+            pdf.addImage(imgData, 'PNG', 20, y + 10, 170, 100);
+            y += 120; // Adjust y after chart
+        }
+
+        // Journal Entries
+        if (weeklyJournalEntries.length > 0) {
+            pdf.addPage();
+            pdf.setFontSize(16);
+            pdf.text('Weekly Journal Entries', 20, 30);
+            let jy = 50;
+            weeklyJournalEntries.forEach(entry => {
+                pdf.setFontSize(12);
+                pdf.text(`${entry.date}:`, 20, jy);
+                jy += 10;
+                const lines = pdf.splitTextToSize(entry.entry, 170);
+                lines.forEach(line => {
+                    pdf.text(line, 30, jy);
+                    jy += 10;
+                    if (jy > 270) {
+                        pdf.addPage();
+                        jy = 30;
+                    }
+                });
+                jy += 5; // Space between entries
+            });
+        }
+
+        // Save PDF
+        pdf.save('weekly_mood_report.pdf');
+    }
+
     function getPersonalizedPrompt(userText) {
         const bioData = JSON.parse(localStorage.getItem('bioData')) || {};
         let prompt = `You are Mindfulmate, an AI mental health support chatbot for higher education students. Provide empathetic, supportive responses focused on mental health, stress management, and well-being. Encourage seeking professional help when appropriate.`;
@@ -310,7 +427,6 @@ import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
         return prompt;
     }
 
-    // Function to get response from Gemini
     async function getBotResponse(userText) {
         const prompt = getPersonalizedPrompt(userText);
         try {
@@ -333,9 +449,8 @@ import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
         }
     }
 
-    // Function to get response from OpenRouter
     async function getOpenRouterResponse(userText) {
-        const systemPrompt = getPersonalizedPrompt(''); // Get the base prompt without user text
+        const systemPrompt = getPersonalizedPrompt('');
         console.log("OpenRouter API call - systemPrompt:", systemPrompt);
         console.log("OpenRouter API call - userText:", userText);
         try {
@@ -344,9 +459,8 @@ import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
                 headers: {
                     'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
                     'Content-Type': 'application/json',
-                    // Optional: Include these for app attribution on OpenRouter leaderboards
-                    'HTTP-Referer': 'http://localhost:5500', // Your site URL/localhost
-                    'X-Title': 'Mindfulmate Chatbot' // Your app title
+                    'HTTP-Referer': 'http://localhost:5500',
+                    'X-Title': 'Mindfulmate Chatbot' 
                 },
                 body: JSON.stringify({
                     model: "deepseek/deepseek-chat-v3.1:free",
@@ -374,7 +488,6 @@ import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
 
             const data = await response.json();
 
-            // Assuming a non-streaming response structure similar to OpenAI
             const aiContent = data.choices[0].message.content;
             return aiContent;
 
@@ -385,11 +498,12 @@ import { GEMINI_API_KEY, OPENROUTER_API_KEY } from './config.js';
         }
     }
 
-    // Welcome message
     const bioData = JSON.parse(localStorage.getItem('bioData')) || {};
     if (bioData.name) {
         appendMessage(`Welcome back, ${bioData.name}! I'm Mindfulmate, your AI mental health support chatbot. How are you feeling today?`, 'bot-message');
     } else {
         appendMessage("Hello! I'm Mindfulmate, your AI mental health support chatbot. How are you feeling today?", 'bot-message');
     }
+
+    renderMoodChart(); // Render chart on load
 });

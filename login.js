@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const signupSection = document.getElementById('signupSection');
     const forgotPasswordLink = document.getElementById('forgotPassword');
 
-    // Simulate progress percentage (e.g., points earned)
     let progressPercent = 0;
 
     function updateProgress() {
